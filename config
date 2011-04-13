@@ -1,0 +1,146 @@
+{
+
+# Service files location ######################################################
+# cache file (to store data between bot's invocations)
+    'cache'	=> './jabbot_cache',
+# log file
+    'log'	=> './jabbot_log',
+# should the history be stored?
+    'store_history' => 1,
+# directory with the history of bot and users interaction
+    'history'	=> 'history/',
+# localization file
+    'locale'	=> './locale.ru',
+
+###############################################################################
+
+# Jabber-server connection and work loop parameters ###########################
+    'connection' => {	hostname	=> 'somehost.somedomain',
+            		username	=> 'zabbot',
+                        password	=> 'zabbot_password',
+                        resource	=> 'Jabbot',
+			tls		=> 1,
+			port 		=> 5222,
+			register 	=> 0,
+# a number of reconnection attempts
+			connectattempts	=> 5,
+# time in seconds between reconnection attempts
+			connectsleep 	=> 5
+    },
+# reconnection flag (can be useful on Jabbot's ip change)
+    'reconnect'	=> 1,
+
+# conferences host
+    'conferences'	=> 'conference.somehost.somedomain',
+
+###############################################################################
+
+# Zabbix-related parameters (Zabbot part) #####################################
+
+    'zabbix' => {
+	'url'		=> 'https://zabbix.somehost.somedomain/api_jsonrpc.php', # JSON URL
+	'username'	=> 'zabbot',
+	'password'	=> 'zabbix_password',
+	'default_events_limit' => 10 # default limit for events list
+    },
+
+###############################################################################
+
+# Jabbot's commands and reactions #############################################
+
+    'errors' => {
+# reaction on unknown command as a function
+#	'not_found_func' => 'Jabbot::Actions::SomeModule/somefunction',
+
+# reacton on unknown command as a phrase (used if function not defined)
+	'not_found' => 'Unknown command',
+
+# reaction on forbidden command as a function
+#	'forbidden_func' => 'Jabbot::Actions::SomeModule2/somefunction2',
+
+# reacton on forbidden command as a phrase (used if function not defined)
+	'forbidden' => 'You are not permitted to request this command'
+    },
+
+    'commands'	=> {
+
+# Chat mode commands
+	'chat'	=> {
+		     'visit'	=> { 'users'	=> ['user@somehost.somedomain', 'user2@somehost.somedomain'],
+				     'action'	=> 'enter_room',
+				     'help'	=> 'visit roomname'
+		     },
+		     'leave'	=> { 'users'	=> ['user@somehost.somedomain', 'user2@somehost.somedomain'],
+				     'action'	=> 'exit_room',
+				     'help'	=> 'leave roomname'
+		     },
+		     'die'	=> { 'users'	=> ['user@somehost.somedomain'],
+				     'action'	=> 'disconnect'
+		     },
+		     'help'	=> { 'process'	=> 'Jabbot::Actions::Help/help',
+				     'action'	=> 'chat',
+				     'help'	=> 'without arguments'
+		     },
+
+# Zabbix-related commands in chat mode (Zabbot part)
+		     'about'		=> { 'process'	=> 'Jabbot::Actions::Zabbot/about',
+					     'action'	=> 'chat',
+					     'help'	=> 'without arguments'
+		     },
+		     'all-events'	=> { 'users'	=> ['user@somehost.somedomain'],
+					     'process'	=> 'Jabbot::Actions::Zabbot/all_events',
+					     'action'	=> 'chat',
+					     'help'	=> 'all-events [ <limit> ]'
+		     },
+		     'check-zabbix'	=> { 'users'	=> ['user@somehost.somedomain'],
+		    			     'process'	=> 'Jabbot::Actions::Zabbot/check_zabbix',
+					     'action'	=> 'chat',
+					     'help'	=> 'without arguments'
+		     },
+		     'events'		=> { 'users'	=> ['user@somehost.somedomain'],
+					     'process'	=> 'Jabbot::Actions::Zabbot/events',
+					     'action'	=> 'chat',
+					     'help'	=> 'for usage info call \'events\' without agruments or \'help-zabbot events\''
+		     },
+		     'help-zabbot'	=> { 'process'	=> 'Jabbot::Actions::Zabbot/help',
+					     'action'	=> 'chat',
+					     'help'	=> 'help-zabbot [ <command-name> ]'
+		     },
+		     'host'		=> { 'users'	=> ['user@somehost.somedomain'],
+					     'process'	=> 'Jabbot::Actions::Zabbot/host',
+					     'action'	=> 'chat',
+					     'help'	=> 'for usage info call \'host\' without agruments or \'help-zabbot host\''
+		     },
+		     'list-hosts'	=> { 'users'	=> ['user@somehost.somedomain'],
+					     'process'	=> 'Jabbot::Actions::Zabbot/list_hosts',
+					     'action'	=> 'chat',
+					     'help'	=> 'for usage info call \'list-host\' without agruments or \'help-zabbot list-hosts\''
+		     }
+	},
+
+# Groupchat mode commands
+	'groupchat' => {
+# Jabbot reference in groupchat mode
+	    ' name' => 'Zabbot',
+# Jabbot nick in groupchat mode (could be used as a reference too)
+	    ' nick' => 'Zab',
+
+	    'leave' => { 'users'	=> ['nick'],
+			 'action'	=> 'exit_room',
+			 'help'		=> 'without arguments'
+	    },
+	    'help' => {  'process'	=> 'Jabbot::Actions::Help/help',
+			 'action'	=> 'groupchat',
+			 'help'		=> 'without arguments'
+	     }
+	},
+
+# Normal mode commands
+	'normal' => {
+		     'help'	=> { 'process' => 'Jabbot::Actions::Help/help',
+				     'action' => 'normal'
+		     }
+	}
+
+    }
+};
