@@ -26,7 +26,7 @@ use JSON;
 
 use POSIX;
 
-use constant ZABBOT_VERSION => '0.3.0';
+use constant ZABBOT_VERSION => '0.4.0';
 
 # About Zabbot
 # Param: data hash (not used)
