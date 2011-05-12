@@ -33,7 +33,7 @@ use constant ZABBOT_VERSION => '0.4.0';
 # Return: message about Zabbot
 sub about {
     return "Zabbot v." . ZABBOT_VERSION .
-". (c) 2010 Fedor A. Fetisov. Licensed under the terms of the GNU GPLv3.";
+". (c) 2010, 2011 Fedor A. Fetisov. Licensed under the terms of the GNU GPLv3.";
 }
 
 # Get some help
