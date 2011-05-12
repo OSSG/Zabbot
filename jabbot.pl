@@ -75,7 +75,10 @@ if (-f $config->{'cache'}) {
 if (defined $config->{'errors'}->{'not_found_func'}) {
     my ($module, $func) = split('/', $config->{'errors'}->{'not_found_func'});
     eval "require $module";
-    *not_found = $module . '::' . $func;
+# Check for errors on module connection
+    unless($@) {
+	*not_found = $module . '::' . $func;
+    }
 } else {
     *not_found = \&empty;
 }
@@ -85,9 +88,25 @@ if (defined $config->{'errors'}->{'not_found_func'}) {
 if (defined $config->{'errors'}->{'forbidden_func'}) {
     my ($module, $func) = split('/', $config->{'errors'}->{'forbidden_func'});
     eval "require $module";
-    *forbidden = $module . '::' . $func;
+# Check for errors on module connection
+    unless(@$) {
+	*forbidden = $module . '::' . $func;
+    }
 } else {
     *forbidden = \&empty;
+}
+
+# Set function for processing commands failed due to some error in external module or function
+# (If such function isn't defined in config then empty one will be used)
+if (defined $config->{'errors'}->{'fail_func'}) {
+    my ($module, $func) = split('/', $config->{'errors'}->{'fail_func'});
+    eval "require $module";
+    unless(@$) {
+# Check for errors on module connection
+	*fail = $module . '::' . $func;
+    }
+} else {
+    *fail = \&empty;
 }
 
 # Go into background mode unless debug flag is set on
@@ -327,35 +346,58 @@ sub _trueCB {
 # Plug in action module and call processor of the given command
 			my ($module, $func) = split('/', $process);
 			eval "require $module";
-			*func = $module . '::' . $func;
-			$reply = func( {
-					'args' => _split_args($reply),
-					'command' => $act,
-					'user' => $user,
-					'cache' => \$cache,
-					'config' => $config,
-					'mode' => $mode,
-					'client' => \$client } );
+# Check for errors on module connection
+			unless ($@) {
+			    *func = $module . '::' . $func;
+			    eval { $reply = func( {
+						    'args' => _split_args($reply),
+						    'command' => $act,
+						    'user' => $user,
+						    'cache' => \$cache,
+						    'config' => $config,
+						    'mode' => $mode,
+						    'client' => \$client } );
+			    };
+			    if ($@) {
+# Something went wrong - function execution failed - try to call failover function
+				my $temp = $@;
+				$reply = eval { fail($temp); } ||
+					 $cache->{'runtime'}->{'locale'}->locale($config->{'errors'}->{'fail'}) . $temp;
+			    }
+			} else {
+			    my $temp = $@;
+			    $reply = eval { fail($temp); } ||
+				     $cache->{'runtime'}->{'locale'}->locale($config->{'errors'}->{'fail'}) . $temp;
+			}
 			_utf8_off($reply);
 		    }
 # Define finite Jabbot reaction on command (will it be result output or service action)
 		    my $function = $action->{'action'};
 		    if (defined $function) {
 			*func = $function;
-			func($reply, $sender, $thread);
+			eval { func($reply, $sender, $thread); };
+			if ($@) {
+# Something went wrong - function execution failed - try to call failover function
+			    my $temp = $@;
+			    $reply .= eval { fail($temp); } ||
+				     $cache->{'runtime'}->{'locale'}->locale($config->{'errors'}->{'fail'}) . $temp;
+# ...and call for corresponding finite Jabbot reaction
+			    *func = $mode;
+			    func($reply, $sender, $thread);
+			}
 		    }
 # Return result: processor output (if exists) or empty string
 		    return $process && $reply || '';
 		} else {
 # Action denied - call for corresponding processor...
-		    $reply = forbidden( {
+		    $reply = eval { forbidden( {
 					 'args' => _split_args($reply),
 					 'command' => $act,
 					 'user' => $user,
 					 'cache' => \$cache,
 					 'config' => $config,
 					 'mode' => $mode,
-					 'client' => \$client } ) ||
+					 'client' => \$client } ) } ||
 			     $cache->{'runtime'}->{'locale'}->locale($config->{'errors'}->{'forbidden'});
 # ...and call for corresponding finite Jabbot reaction
 		    *func = $mode;
@@ -364,14 +406,14 @@ sub _trueCB {
 		}
 	    } else {
 # Action unknown - call for corresponding processor...
-		$reply = not_found( {
+		$reply = eval {not_found( {
 				     'args' => _split_args($reply),
 				     'command' => $act,
 				     'user' => $user,
 				     'cache' => \$cache,
 				     'config' => $config,
 				     'mode' => $mode,
-				     'client' => \$client } ) ||
+				     'client' => \$client } ) } ||
 			$cache->{'runtime'}->{'locale'}->locale($config->{'errors'}->{'not_found'});
 # ...and call for corresponding finite Jabbot reaction
 		*func = $mode;

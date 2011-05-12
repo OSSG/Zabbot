@@ -3,6 +3,7 @@
 # Core script
     'Unknown command' => 'Неизвестная команда',
     'You are not permitted to request this command' => 'У Вас нет полномочий для запроса этой команды',
+    "System error occured on command execution. System error message:\n" => "В процессе выполнения команды произошла системная ошибка. Исходное сообщение об ошибке:\n",
 
 # Jabbot::Actions::Help
     'Can execute:' => 'Могу выполнить команды:',

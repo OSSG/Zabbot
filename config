@@ -59,7 +59,14 @@
 #	'forbidden_func' => 'Jabbot::Actions::SomeModule2/somefunction2',
 
 # reacton on forbidden command as a phrase (used if function not defined)
-	'forbidden' => 'You are not permitted to request this command'
+	'forbidden' => 'You are not permitted to request this command',
+
+# reaction on failed command as a function
+	'fail_func' => 'Jabbot::Actions::SomeModule3/somefunction3',
+
+# reacton on failed command as a phrase (used if function not defined)
+	'fail' => "System error occured on command execution. System error message:\n"
+
     },
 
     'commands'	=> {
