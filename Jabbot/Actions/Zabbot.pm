@@ -21,7 +21,7 @@ use warnings;
 
 use Jabbot::Service qw(log_it);
 
-use JSON::RPC::Client;
+use JSON::RPC::Legacy::Client;
 use JSON;
 
 use POSIX;
@@ -122,7 +122,6 @@ sub check_zabbix {
     my $object = {
 		    'jsonrpc' => '2.0',
 		    'method' => 'apiinfo.version',
-		    'auth' => ${$data->{'cache'}}->{'static'}->{'json'}->{'sid'},
 		    'id' => 4,
 		    'params' => {}
     };
@@ -515,7 +514,8 @@ sub _init {
     my $object;
 
 # Create JSON client object if it doesn't already exist
-    $$cache->{'runtime'}->{'json'}->{'client'} ||= new JSON::RPC::Client;
+    $$cache->{'runtime'}->{'json'}->{'client'} ||= new JSON::RPC::Legacy::Client;
+    $$cache->{'runtime'}->{'json'}->{'client'}->version('1.0');
 
 # Look for JSON session id in cache and check it if found
     if (defined $$cache->{'static'}->{'json'}->{'sid'}) {
@@ -547,10 +547,10 @@ sub _init {
     unless (defined $$cache->{'static'}->{'json'}->{'sid'}) {
 	$object = {
 		'jsonrpc' => '2.0',
-		'method' => 'user.authenticate',
+		'method' => 'user.login',
 		'id' => 1,
 		'params' => {
-			    'user'	=> $config->{'username'},
+			    'username'	=> $config->{'username'},
 			    'password'	=> $config->{'password'}
 		}
 	};
