@@ -21,7 +21,7 @@ use warnings;
 use Data::Dumper;
 use Encode qw(_utf8_on _utf8_off);
 use Getopt::Long qw(:config no_ignore_case bundling no_auto_abbrev);
-use IO::Socket::SSL v0.81;
+use IO::Socket::SSL;
 use Net::Jabber;
 use POSIX;
 
@@ -143,15 +143,10 @@ my $die_flag = $config->{'reconnect'} ? 0 : 1;
 do {
 
 # Initialize Jabber-client
-    $client = new Net::Jabber::Client();
+    $client = new Net::Jabber::Client( debuglevel => $options->{'debug'});
 
 # Set callbacks for service actions: authorization and disconnection
-    $client->SetCallBacks( onauth => \&onAuth, ondisconnect => \&onDisconnect );
-
-# Set callbacks for incoming commands
-    $client->SetMessageCallBacks( chat=>\&messageChatCB,
-				  groupchat => \&messageGroupChatCB,
-				  normal => \&messageNormalCB );
+    $client->SetCallBacks( onauth => \&onAuth, ondisconnect => \&onDisconnect, message => \&messageCB );
 
 # Go into the main working loop
     $client->Execute(%{$config->{'connection'}});
@@ -188,6 +183,28 @@ sub onDisconnect {
 	exit;
     }
     return;
+}
+
+# Reaction on message
+# Param: session id
+# Param: message
+# Return: none
+sub messageCB {
+    my $sid = shift;
+    my $message = shift;
+    my $type = $message->GetType();
+    if ('chat' eq $type) {
+        return messageChatCB($sid, $message);
+    }
+    elsif ('normal' eq $type) {
+        return messageNormalCB($sid, $message);
+    }
+    elsif ('groupchat' eq $type) {
+        return messageNormalCB($sid, $message);
+    }
+    else {
+        log_it('Got unknown message of type ' . $type);
+    }
 }
 
 # Reaction on private message in chat mode
