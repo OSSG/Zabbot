@@ -169,7 +169,7 @@ exit;
 # Param: none
 # Return: none
 sub onAuth {
-    $client->PresenceSend(show=>'online', priority=>10);
+    $client->PresenceSend(type=>'available', priority=>10);
     return;
 }
 
