@@ -332,6 +332,8 @@ sub _trueCB {
 	my $reply='';
 
 # Get command message and it's possible arguments
+        $body =~ s/^\s+//;
+        $body =~ s/\s+$//;
 	if ($body =~ /^(.+?)([\s,!\.]+(.*))?$/m) {
 	    my $act = $1;
 	    _utf8_on($act);
