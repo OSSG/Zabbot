@@ -97,7 +97,7 @@
 		     'all-events'	=> { 'users'	=> ['user@somehost.somedomain'],
 					     'process'	=> 'Jabbot::Actions::Zabbot/all_events',
 					     'action'	=> 'chat',
-					     'help'	=> 'all-events [ <limit> ]'
+					     'help'	=> 'all-events [ active ] [ <limit> ]'
 		     },
 		     'check-zabbix'	=> { 'users'	=> ['user@somehost.somedomain'],
 		    			     'process'	=> 'Jabbot::Actions::Zabbot/check_zabbix',

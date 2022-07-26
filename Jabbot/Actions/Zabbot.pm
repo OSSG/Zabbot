@@ -174,11 +174,12 @@ sub show_items {
 	if (scalar(@subst)) {
 	    for (my $i=1; $i <= scalar(@subst); $i++) {
 		$item->{'description'} =~ s/\$$i/$subst[$i-1]/g;
+		$item->{'name'} =~ s/\$$i/$subst[$i-1]/g;
 	    }
 	}
 
 # Transform item value into human-friendly format and compose item's string
-	$string .= $item->{'description'} . ': '
+	$string .= $item->{'name'} . ($item->{'description'} ? ' [ ' . $item->{'description'} . ' ] ' : '') . ': '
 		. _process_value(
 		    $item->{'lastvalue'},
 		    $item->{'units'},
@@ -229,28 +230,16 @@ sub show_triggers {
 # Triggers successfully obtained, proceeding...
     my $string = '';
     foreach my $trigger (@{$result->{'result'}}) {
-	my $temp = '';
+	my $temp = _event_state($trigger, ${$data->{'cache'}}->{'runtime'}->{'locale'}) . "\n";
 	unless ($trigger->{'value'}) {
 # Trigger's value '0' stands for fine state, don't place it in reply message
 # 	unless all triggers requested
 	    next unless ($mode eq 'all');
-	    $temp .= ${$data->{'cache'}}->{'runtime'}->{'locale'}->locale("Ok\n");
-	}
-	elsif ($trigger->{'value'} == 1) {
-	    $temp .= ${$data->{'cache'}}->{'runtime'}->{'locale'}->locale("Error!")
-		. ($trigger->{'error'} ? ' (' . $trigger->{'error'} . ')' : '')
-		. "\n";
 	}
 	elsif ($trigger->{'value'} == 2) {
 # Trigger's value '2' stands for N/D state, don't place it in reply message
 # 	if only errors requested
 	    next if ($mode eq 'error');
-	    $temp .= ${$data->{'cache'}}->{'runtime'}->{'locale'}->locale("N/D")
-		. ($trigger->{'error'} ? ' (' . $trigger->{'error'} . ')' : '')
-		. "\n";
-	}
-	else {
-	    $temp .= ${$data->{'cache'}}->{'runtime'}->{'locale'}->locale("Unknown state!\n");
 	}
 # Finally compose trigger's string
 	$string .= $trigger->{'description'} . ': ' . $temp;
@@ -268,18 +257,40 @@ sub events {
     my $data = shift;
 
 # Check for incoming arguments: should be at least one (hostname)
-# and couldn't be more than 2
-    unless (scalar(@{$data->{'args'}}) && scalar(@{$data->{'args'}}) < 3) {
+# and couldn't be more than 3
+    unless (scalar(@{$data->{'args'}}) && scalar(@{$data->{'args'}}) < 4) {
 	return _help($data, 'events');
     }
 
+    my $filter = { 'hostname' => $data->{'args'}->[0] };
+    my $i = 1;
+    if (scalar(@{$data->{'args'}}) == 3) {
+        if ($data->{'args'}->[1] ne 'active') {
+            return _help($data, 'events');
+        }
+        else {
+            $filter->{'errors'} = 1;
+# index for number of events to output is the third parameter
+            $i = 2;
+        }
+    }
+
 # Define number of events to output: if not specified (or invalid) - use default limit
-    my $limit = ((defined $data->{'args'}->[1]) && ($data->{'args'}->[1] =~ /^\d+$/)) ?
-		    $data->{'args'}->[1] :
-		    $data->{'config'}->{'zabbix'}->{'default_events_limit'};
+    my $limit = $data->{'config'}->{'zabbix'}->{'default_events_limit'};
+    if ((defined $data->{'args'}->[$i])) {
+        if ($data->{'args'}->[$i] =~ /^\d+$/) {
+            $limit = $data->{'args'}->[$i];
+        }
+        elsif (($i == 1) && $data->{'args'}->[$i] eq 'active') {
+            $filter->{'errors'} = 1;
+        }
+        else {
+            return _help($data, 'events');
+        }
+    }
 
 # Get events
-    my $result = get_events($data, $limit, $data->{'args'}->[0]);
+    my $result = get_events($data, $limit, $filter);
 
     return $result->{'result'} if ($result->{'error'});
 
@@ -287,7 +298,9 @@ sub events {
     my $string = '';
     foreach my $event (@{$result->{'result'}}) {
 	$string .= '[' .  _process_unixtime($event->{'lastchange'})
-		    . '] ' . $event->{'description'} . "\n";
+		    . '] ' . $event->{'description'}
+		    . ' : ' . _event_state($event, ${$data->{'cache'}}->{'runtime'}->{'locale'})
+		    . "\n";
     }
 
     return $string ||
@@ -300,18 +313,40 @@ sub events {
 sub all_events {
     my $data = shift;
 
-# Check for incoming arguments: couldn't be more than 1
-    unless (scalar(@{$data->{'args'}}) < 2) {
+# Check for incoming arguments: couldn't be more than 2
+    unless (scalar(@{$data->{'args'}}) < 3) {
 	return _help($data, 'all-events');
     }
 
+    my $filter = {};
+    my $i = 0;
+    if (scalar(@{$data->{'args'}}) == 2) {
+        if ($data->{'args'}->[0] ne 'active') {
+            return _help($data, 'all-events');
+        }
+        else {
+            $filter->{'errors'} = 1;
+# index for number of events to output is the second parameter
+            $i = 1;
+        }
+    }
+
 # Define number of events to output: if not specified (or invalid) - use default limit
-    my $limit = ((defined $data->{'args'}->[0]) && ($data->{'args'}->[0] =~ /^\d+$/)) ?
-		    $data->{'args'}->[0] :
-		    $data->{'config'}->{'zabbix'}->{'default_events_limit'};
+    my $limit = $data->{'config'}->{'zabbix'}->{'default_events_limit'};
+    if ((defined $data->{'args'}->[$i])) {
+        if ($data->{'args'}->[$i] =~ /^\d+$/) {
+            $limit = $data->{'args'}->[$i];
+        }
+        elsif (!$i && $data->{'args'}->[$i] eq 'active') {
+            $filter->{'errors'} = 1;
+        }
+        else {
+            return _help($data, 'all-events');
+        }
+    }
 
 # Get events
-    my $result = get_events($data, $limit);
+    my $result = get_events($data, $limit, $filter);
 
     return $result->{'result'} if ($result->{'error'});
 
@@ -320,7 +355,9 @@ sub all_events {
     foreach my $event (@{$result->{'result'}}) {
 	$string .= '[' .  _process_unixtime($event->{'lastchange'})
 		    . '] ' . _escape_hostname($event->{'hosts'}->[0]->{'host'})
-		    . ' : ' . $event->{'description'} . "\n";
+		    . ' : ' . $event->{'description'}
+		    . ' : ' . _event_state($event, ${$data->{'cache'}}->{'runtime'}->{'locale'})
+		    . "\n";
     }
 
     return $string ||
@@ -331,11 +368,11 @@ sub all_events {
 # Get events according to given params
 # Param: data hash
 # Param: number of events
-# Param: hostname (optional)
+# Param: filter (optional)
 sub get_events {
     my $data = shift;
     my $limit = shift;
-    my $host = shift;
+    my $filter = shift || {};
 
 # Request all events sorted by time descendantly
     my $object = {
@@ -345,15 +382,18 @@ sub get_events {
 		'id' => 5,
 		'params' => {
 		    'output' => 'extend',
-		    'select_hosts' => 'extend',
+		    'selectHosts' => 'extend',
 		    'limit' => $limit,
 		    'sortorder' => 'DESC',
 		    'sortfield' => 'lastchange'
 		}
     };
 
+    $object->{'params'}->{'filter'} = {} if (scalar(keys(%$filter)));
 # ... request events only for a given host if hostname specified
-    $object->{'params'}->{'filter'} = { 'host' => $host } if (defined $host);
+    $object->{'params'}->{'filter'}->{'host'} = $filter->{'hostname'} if (exists($filter->{'hostname'}));
+# ... request only active events
+    $object->{'params'}->{'filter'}->{'value'} = [1, 2] if (exists($filter->{'errors'}));
 
     return _json_request($data, $object);
 }
@@ -649,7 +689,7 @@ sub _help {
 	$known ||= 1;
     }
     if ((!defined $type) || ($type eq 'all-events')) {
-	$message .= $separator . 'all-events [ <events-limit> ]';
+	$message .= $separator . 'all-events [ active ] [ <events-limit> ]';
 	$known ||= 1;
     }
     if ((!defined $type) || ($type eq 'check-zabbix')) {
@@ -657,7 +697,7 @@ sub _help {
 	$known ||= 1;
     }
     if ((!defined $type) || ($type eq 'events')) {
-	$message .= $separator . 'events <hostname> [ <count> ]';
+	$message .= $separator . 'events <hostname> [ active ] [ <count> ]';
 	$known ||= 1;
     }
     if ((!defined $type) || ($type eq 'help-zabbot')) {
@@ -806,6 +846,30 @@ sub _escape_hostname {
     }
 
     return $hostname;
+}
+
+# Get localized name of an actual state of an event (with details if available)
+# Param: event object
+# Param: localization object
+# Return: state
+sub _event_state {
+    my $event = shift;
+    my $locale = shift;
+
+    my $result = '';
+    unless ($event->{'value'}) {
+	$result = $locale->locale('Ok');
+    }
+    elsif ($event->{'value'} == 1) {
+	$result = $locale->locale('Error!') . ($event->{'error'} ? ' (' . $event->{'error'} . ')' : '');
+    }
+    elsif ($event->{'value'} == 2) {
+	$result = $locale->locale('N/D') . ($event->{'error'} ? ' (' . $event->{'error'} . ')' : '');
+    }
+    else {
+        $result = $locale->locale('Unknown state!');
+    }
+    return $result;
 }
 
 1;
