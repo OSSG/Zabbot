@@ -26,14 +26,14 @@ use JSON;
 
 use POSIX;
 
-use constant ZABBOT_VERSION => '0.4.0';
+use constant ZABBOT_VERSION => '0.6.0';
 
 # About Zabbot
 # Param: data hash (not used)
 # Return: message about Zabbot
 sub about {
     return "Zabbot v." . ZABBOT_VERSION .
-". (c) 2010, 2011 Fedor A. Fetisov. Licensed under the terms of the GNU GPLv3.";
+". (c) 2010-2022 Fedor A. Fetisov. Licensed under the terms of the GNU GPLv3.";
 }
 
 # Get some help
